@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Day is Tomorrow?</title>
+    <style>
+        :root {
+            --bg-color: #111;
+            --text-color: #fff;
+            --border-color: #333;
+            --accent-color: #ff0055;
+            --success-color: #00ff88;
+            --input-bg: #222;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --radius: 4px;
+            --gap: 12px;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f5f5f5;
+            --text-color: #111;
+            --border-color: #ccc;
+            --input-bg: #fff;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            padding: 32px;
+            text-align: center;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+        }
+
+        button {
+            font-family: inherit;
+            font-size: 1rem;
+            padding: 10px 20px;
+            border: 1px solid var(--border-color);
+            background: var(--input-bg);
+            color: var(--text-color);
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        button:hover {
+            background: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        .theme-toggle {
+            font-size: 0.875rem;
+            padding: 8px 16px;
+        }
+
+        .days-select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: var(--gap);
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: var(--radius);
+        }
+
+        .days-select option {
+            padding: 4px;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 24px;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            margin: 0 auto 8px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .result {
+            display: none;
+            margin-top: 24px;
+            font-size: 1.25rem;
+            color: var(--success-color);
+        }
+
+        /* AI Chat Panel */
+        .ai-chat {
+            position: fixed;
+            top: 0;
+            right: -350px;
+            width: 350px;
+            height: 100vh;
+            background: var(--bg-color);
+            border-left: 1px solid var(--border-color);
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -2px 0 10px var(--shadow);
+            z-index: 1001;
+        }
+
+        .ai-chat.open { right: 0; }
+
+        .ai-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .ai-header h3 { font-size: 1.125rem; }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .ai-messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: var(--radius);
+            font-size: 0.938rem;
+            line-height: 1.4;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background: var(--border-color);
+        }
+
+        .ai-message {
+            align-self: flex-start;
+            background: var(--input-bg);
+        }
+
+        .ai-input-container {
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .ai-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--input-bg);
+            color: var(--text-color);
+            border-radius: var(--radius);
+            font-size: 1rem;
+        }
+
+        .ask-ai-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            background: var(--accent-color);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 8px var(--shadow);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        @media (max-width: 400px) {
+            .ai-chat { width: 100%; right: -100%; }
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <div class="container">
+        <div class="header">
+            <h1>What Day is Tomorrow?</h1>
+            <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
+        </div>
+        
+        <select class="days-select" id="today" multiple>
+            <option value="sunday">Sunday</option>
+            <option value="monday">Monday</option>
+            <option value="tuesday">Tuesday</option>
+            <option value="wednesday">Wednesday</option>
+            <option value="thursday">Thursday</option>
+            <option value="friday">Friday</option>
+            <option value="saturday">Saturday</option>
+        </select>
+        
+        <button onclick="calculate()">Find Out Tomorrow</button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p id="loadingText"></p>
+        </div>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <button class="ask-ai-btn" onclick="toggleAIChat()">AI</button>
+
+    <div class="ai-chat" id="aiChat">
+        <div class="ai-header">
+            <h3>AI Assistant</h3>
+            <button class="close-btn" onclick="toggleAIChat()">×</button>
+        </div>
+        <div class="ai-messages" id="aiMessages">
+            <div class="message ai-message">
+                Hello! I'm a simple AI. I can help you with basic math problems and tell you what day is tomorrow. What would you like to know?
+            </div>
+        </div>
+        <div class="ai-input-container">
+            <input type="text" class="ai-input" id="aiInput" placeholder="Ask me something..." onkeypress="handleKeyPress(event)">
+        </div>
+    </div>
+
+    <script>
+        // Theme toggle
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            body.setAttribute('data-theme', newTheme);
+        }
+
+        // AI Chat toggle
+        function toggleAIChat() {
+            const aiChat = document.getElementById('aiChat');
+            aiChat.classList.toggle('open');
+        }
+
+        // Calculate tomorrow
+        const steps = [
+            "Contacting NASA...",
+            "Sending signal to Mars...",
+            "Receiving signals from aliens...",
+            "Validating the signal in ISS...",
+            "Receiving signal...",
+            "Decoding the packets..."
+        ];
+
+        function calculate() {
+            const select = document.getElementById("today");
+            const selectedOptions = Array.from(select.selectedOptions);
+            
+            if (selectedOptions.length === 0) {
+                alert("Please select at least one day");
+                return;
+            }
+
+            const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+            let results = [];
+
+            selectedOptions.forEach(option => {
+                const todayInput = option.value.toLowerCase();
+                const todayIndex = days.indexOf(todayInput);
+                const tomorrowIndex = (todayIndex + 1) % 7;
+                results.push(`${todayInput.charAt(0).toUpperCase() + todayInput.slice(1)} → ${days[tomorrowIndex].charAt(0).toUpperCase() + days[tomorrowIndex].slice(1)}`);
+            });
+
+            document.getElementById("loading").style.display = "block";
+            document.getElementById("result").style.display = "none";
+
+            let i = 0;
+            const loadingText = document.getElementById("loadingText");
+
+            const stepInterval = setInterval(() => {
+                loadingText.textContent = steps[i];
+                i++;
+                if (i >= steps.length) {
+                    clearInterval(stepInterval);
+
+                    setTimeout(() => {
+                        document.getElementById("loading").style.display = "none";
+                        document.getElementById("result").innerHTML = results.join("<br>");
+                        document.getElementById("result").style.display = "block";
+                    }, 1500);
+                }
+            }, 1500);
+        }
+
+        // AI Chat functionality
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('aiInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            addMessage(message, 'user');
+            input.value = '';
+
+            // Process AI response
+            setTimeout(() => {
+                const response = generateAIResponse(message.toLowerCase());
+                addMessage(response, 'ai');
+            }, 500);
+        }
+
+        function addMessage(text, sender) {
+            const messagesDiv = document.getElementById('aiMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.textContent = text;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function generateAIResponse(message) {
+            // Basic math
+            const mathMatch = message.match(/(\d+)\s*([+\-*/])\s*(\d+)/);
+            if (mathMatch) {
+                const num1 = parseInt(mathMatch[1]);
+                const operator = mathMatch[2];
+                const num2 = parseInt(mathMatch[3]);
+                
+                switch(operator) {
+                    case '+': return `The result is ${num1 + num2}`;
+                    case '-': return `The result is ${num1 - num2}`;
+                    case '*': return `The result is ${num1 * num2}`;
+                    case '/': return num2 !== 0 ? `The result is ${num1 / num2}` : "Cannot divide by zero";
+                }
+            }
+
+            // Tomorrow calculation
+            if (message.includes('tomorrow') || message.includes('day after')) {
+                const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+                const today = new Date().getDay();
+                const tomorrow = (today + 1) % 7;
+                return `Tomorrow is ${days[tomorrow].charAt(0).toUpperCase() + days[tomorrow].slice(1)}`;
+            }
+
+            // Default response
+            return "I can only help with basic math (like 2+2) and telling you what day is tomorrow. Please ask me about these topics!";
+        }
+    </script>
+</body>
+</html>
